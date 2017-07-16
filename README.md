@@ -47,3 +47,37 @@ You do NOT need to clone this repo, unless you are planning to contribute to it.
 ## Alternatively
 
 Generate a webhook url (API Gateway/Lambda) to receive notifications from GitHub and deploy.
+
+
+
+
+*************************
+
+https://stelligent.com/2016/03/21/create-a-cross-account-pipeline-in-aws-cloudformation/
+While not directly related to limiting access permissions, I’ve found the code fragment below to be useful when defining my CloudFormation stacks for CodePipeline. It’s a CloudFormation Output that defines the URL for CodePipeline. It’s useful as a way to quickly jump to the pipeline in CodePipeline once the CloudFormation stack is complete.
+```JSON
+"CodePipelineURL":{
+      "Value":{
+        "Fn::Join":[
+          "",
+          [
+            "https://console.aws.amazon.com/codepipeline/home?region=",
+            {
+              "Ref":"AWS::Region"
+            },
+            "#/view/",
+            {
+              "Ref":"CodePipelineStack"
+            }
+          ]
+        ]
+      }
+    },
+```
+
+```bash
+aws cloudformation create-stack --stack-name CrossAccountPipeline 
+--template-url https://s3.amazonaws.com/stelligent-public/cloudformation-templates/github/cross-account-pipeline/codepipeline-cross-account-pipeline.json 
+ --region us-east-1 --disable-rollback --capabilities="CAPABILITY_IAM" 
+--parameters ParameterKey=PipelineAWSAccountId,ParameterValue=YOURAWSACCTID
+```
