@@ -7,8 +7,3 @@ aws cloudformation deploy \
     --parameter-overrides DomainName=www.amare.tv HostedZone=amare.tv \
     --profile $AWS_PROFILE \
     --capabilities CAPABILITY_IAM
-
-# Example how to query stack for output
-# aws cloudformation describe-stacks --profile $AWS_PROFILE --stack-name account --query 'Stacks[0].Outputs[*]' --output text | grep TemplatesBucketName | awk '{print $2}'
-# aws cloudformation wait snapshot-completed --snapshot-ids snap-aabbccdd
-# aws cloudformation wait stack-$ACTION-complete --profile $AWS_PROFILE --stack-name $STACK_NAME

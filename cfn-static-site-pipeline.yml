@@ -1,22 +1,8 @@
-AWSTemplateFormatVersion: 2010-09-09
-Description: A React application deployed to Route53/CloudFront/S3
+AWSTemplateFormatVersion: "2010-09-09"
+Description: A pipeline to build a deploy a static web application on CloudFront/S3
 Conditions:
   CreateCodeBuildResources: !Equals [true, true]
   CreateWebSiteS3Bucket: !Equals [true, true]
-Metadata:
-  AWS::CloudFormation::Interface:
-    ParameterGroups: [{Label: {default: Application}, Parameters: [ProjectId]}]
-  CodeBuildImage: aws/codebuild/eb-nodejs-4.4.6-amazonlinux-64:2.1.3
-  CodeBuildImageOverride: aws/codebuild/eb-nodejs-4.4.6-amazonlinux-64:2.1.3
-  IsWebsite: true
-  ProjectTemplateId: webapp-nodeweb-lambda
-  WebsiteS3Bucket: !Ref 'WebsiteS3Bucket'
-Outputs:
-  LambdaTrustRole:
-    Description: AWS CodeStar role for AWS Lambda used for passRole to Lambda functions.
-    Export:
-      Name: !Join ['-', [!Ref 'ProjectId', !Ref 'AWS::Region', LambdaTrustRole]]
-    Value: !GetAtt 'LambdaTrustRole.Arn'
 Parameters:
   AppName:
     Description: Name of the application.
@@ -404,3 +390,9 @@ Resources:
       Tags: [{Key: Name, Value: !Join ['-', [!Ref 'ProjectId', WebsiteS3Bucket]]}]
       VersioningConfiguration:
         Status: Enabled
+Outputs:
+  LambdaTrustRole:
+    Description: AWS CodeStar role for AWS Lambda used for passRole to Lambda functions.
+    Export:
+      Name: !Join ['-', [!Ref 'ProjectId', !Ref 'AWS::Region', LambdaTrustRole]]
+    Value: !GetAtt 'LambdaTrustRole.Arn'
