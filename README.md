@@ -14,6 +14,12 @@ What you need:
 
 You do NOT need to clone this repo, unless you are planning to contribute to it.
 
+### How to test aws credentials
+
+```bash
+AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... aws s3 sync misc s3://.../ --acl public-read --cache-control no-cache
+```
+
 ### 1. Deploy CloudFormation template
 
 
@@ -42,13 +48,21 @@ You do NOT need to clone this repo, unless you are planning to contribute to it.
 
 * https://medium.com/@omgwtfmarc/deploying-create-react-app-to-s3-or-cloudfront-48dae4ce0af
 * https://github.com/rbalicki2/react-aws-deployments
+* https://medium.com/@hichaelmart/lambci-4c3e29d6599b
+* https://aws.amazon.com/blogs/devops/integrating-git-with-aws-codepipeline/
 
 
 ## Alternatively
 
 Generate a webhook url (API Gateway/Lambda) to receive notifications from GitHub and deploy.
 
+## Deploy cfn-static-site
 
+## Test cfn-static-site
+
+```bash
+aws s3 cp .../index.html ...
+```
 
 
 *************************
@@ -81,3 +95,9 @@ aws cloudformation create-stack --stack-name CrossAccountPipeline
  --region us-east-1 --disable-rollback --capabilities="CAPABILITY_IAM" 
 --parameters ParameterKey=PipelineAWSAccountId,ParameterValue=YOURAWSACCTID
 ```
+
+### GIthub Integration
+
+* Create API GW + Lambda to receive webhook push, or
+* Configure GitHub to push to SNS (https://github.com/kmamykin/aws-mqtt/settings/hooks/new?service=amazonsns)
+    * Still need to have lambda to process SNS messages and trigger CodePipeline

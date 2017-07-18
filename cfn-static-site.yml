@@ -1,0 +1,117 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  DomainName:
+    Type: String
+    Description: Domain name for the static web site (site.domain.com)
+  HostedZone:
+    Type: String
+    Description: Root hosted domain name (domain.com)
+  IndexDocument:
+    Type: String
+    Default: "index.html"
+  ErrorDocument:
+    Type: String
+    Default: "404.html"
+Resources:
+  ContentBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Ref DomainName
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: !Ref IndexDocument
+        ErrorDocument: !Ref ErrorDocument
+  DeployUser:
+    Type: AWS::IAM::User
+    Properties:
+      Path: "/"
+  DeployUserAccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName:
+        !Ref DeployUser
+  ContentBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ContentBucket
+      PolicyDocument:
+        Id: ReadWriteAccessToDeployUser
+        Version: '2012-10-17'
+        Statement:
+        - Sid: ReadWriteAccess
+          Action:
+          - s3:*
+          Effect: Allow
+          Resource: !Sub "arn:aws:s3:::${ContentBucket}/*"
+          Principal:
+            AWS: !GetAtt DeployUser.Arn
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    DeletionPolicy: Retain
+    Properties:
+      DomainName: !Ref DomainName
+      DomainValidationOptions:
+        - DomainName: !Ref DomainName
+          ValidationDomain: !Ref HostedZone
+  # IMPORTANT: Do not use DefaultRootObject - http://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/DefaultRootObject.html
+  # IMPORTANT: Origin for the distribution should be a configured as a website, not an S3 bucket.
+  #            It's just a matter which domain name to use (hint ...s3-website-...)
+  # Need to specify S3 bucket "Static Website Hosting" domain displayed in the bucket properties. This way CloudFront treats
+  # that domain as any external website origin, and follows all redirects and index.html rules configured on S3.
+  # http://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/DownloadDistS3AndCustomOrigins.html
+  Distribution:
+    Type: 'AWS::CloudFront::Distribution'
+    Properties:
+      DistributionConfig:
+        Enabled: 'true'
+        Aliases:
+          - !Ref DomainName
+        Origins:
+          - DomainName: !Sub "${ContentBucket}.s3-website-${AWS::Region}.amazonaws.com"
+            Id: BucketCustomOrigin
+            CustomOriginConfig:
+              HTTPPort: '80'
+              HTTPSPort: '443'
+              OriginProtocolPolicy: http-only
+        # http://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/Expiration.html#ExpirationDownloadDist
+        DefaultCacheBehavior:
+          TargetOriginId: BucketCustomOrigin
+          ForwardedValues:
+            QueryString: 'false'
+            Cookies:
+              Forward: none
+          ViewerProtocolPolicy: allow-all
+          # Serve all content gzipped
+          Compress: 'true'
+          # Setting DefaultTTL and MinTTL tells CloudFront to respect cache header from the Origin, i.e. ContentBucket.
+          # When files are uploaded to ContentBucket, cache-control headers need to be set, e.g.
+          # aws s3 sync ... --cache-control max-age=...
+          DefaultTTL: 0
+          MinTTL: 0
+        ViewerCertificate:
+          AcmCertificateArn: !Ref Certificate
+          MinimumProtocolVersion: 'TLSv1'
+          SslSupportMethod: 'sni-only'
+        #Logging:
+        #  IncludeCookies: 'true'
+        #  Bucket: mylogs.s3.amazonaws.com
+        #  Prefix: myprefix
+  DNSRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Join [ "", [ !Ref HostedZone, "." ] ]
+      Name: !Join [ "", [ !Ref DomainName, "." ] ]
+      Type: CNAME
+      TTL: '600'
+      ResourceRecords:
+        - !GetAtt Distribution.DomainName
+Outputs:
+  DistributionDomainName:
+    Value: !GetAtt Distribution.DomainName
+  ContentBucketName:
+    Value: !Ref ContentBucket
+  AccessKeyformyaccesskey:
+    Value: !Ref DeployUserAccessKey
+  SecretKeyformyaccesskey:
+    Value: !GetAtt DeployUserAccessKey.SecretAccessKey
